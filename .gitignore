@@ -1,0 +1,12 @@
+# Backend
+StudentTaskManager-backend/target/
+StudentTaskManager-backend/.idea/
+StudentTaskManager-backend/*.iml
+
+# Frontend
+Studenttaskmanager-frontend/node_modules/
+Studenttaskmanager-frontend/dist/
+
+# Environment
+.env
+*.env

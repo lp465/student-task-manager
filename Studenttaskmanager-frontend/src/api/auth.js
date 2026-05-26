@@ -1,0 +1,36 @@
+const BASE_URL = "http://localhost:8080/api";
+
+async function handleResponse(response) {
+    try {
+        const data = await response.json();
+        return data;
+    } catch {
+        return { success: false, message: "Server unreachable. Please try again." };
+    }
+}
+
+export async function registerUser(data) {
+    try {
+        const response = await fetch(`${BASE_URL}/users/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        return handleResponse(response);
+    } catch {
+        return { success: false, message: "Server unreachable. Please try again." };
+    }
+}
+
+export async function loginUser(data) {
+    try {
+        const response = await fetch(`${BASE_URL}/users/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        return handleResponse(response);
+    } catch {
+        return { success: false, message: "Server unreachable. Please try again." };
+    }
+}
