@@ -22,4 +22,6 @@ public class TaskRequestDTO {
 
     @NotNull(message = "Due date is required")
     private LocalDate dueDate;
+
+    private String subject;
 }

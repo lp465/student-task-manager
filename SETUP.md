@@ -74,3 +74,7 @@ CREATE DATABASE StudentTaskManagement;
 ```
 
 The application uses `spring.jpa.hibernate.ddl-auto=update` by default to manage schema updates.
+
+## Notes about recent UI/UX changes (v1.0.1)
+
+- The frontend now includes a landing page at `/` and an application layout (`AppLayout`) used by authenticated routes. These are purely UI changes and do not affect backend startup, environment variables, or database schema. An optional `subject` field is persisted on tasks but is backward compatible with existing records.

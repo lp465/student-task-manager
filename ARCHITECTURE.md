@@ -57,3 +57,7 @@ The Student Task Management System is a full-stack application with a Java Sprin
 - `POST /api/tasks/create/{userId}`
 - `PUT /api/tasks/update/{taskId}`
 - `DELETE /api/tasks/delete/{taskId}`
+
+## Recent UI/UX structure notes (v1.0.1)
+
+- The frontend now serves a landing page at `/` and uses an `AppLayout` wrapper for authenticated routes. The `Sidebar` component provides persistent navigation and logout. These are presentation-only changes and do not change API contracts or backend layers.

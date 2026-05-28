@@ -41,6 +41,7 @@ public class TaskService {
                 task.getDescription(),
                 task.getStatus(),
                 task.getDueDate(),
+                task.getSubject(),
                 task.getUser().getId(),
                 task.getUser().getName(),
                 task.getUser().getEmail(),
@@ -60,6 +61,7 @@ public class TaskService {
         task.setStatus(resolveStatus(dto.getStatus(), TaskStatus.PENDING));
         task.setPriority(dto.getPriority() != null ? dto.getPriority() : TaskPriority.MEDIUM);
         task.setDueDate(dto.getDueDate());
+        task.setSubject(dto.getSubject());
         task.setUser(user);
         return convertToDTO(taskRepository.save(task));
     }
@@ -95,6 +97,7 @@ public class TaskService {
         task.setStatus(resolveStatus(dto.getStatus(), task.getStatus()));
         task.setPriority(dto.getPriority() != null ? dto.getPriority() : task.getPriority());
         task.setDueDate(dto.getDueDate());
+        task.setSubject(dto.getSubject());
         return convertToDTO(taskRepository.save(task));
     }
 

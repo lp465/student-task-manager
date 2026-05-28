@@ -24,6 +24,9 @@ function Register() {
 
     return (
         <div className="auth-container">
+            <Link className="auth-back" to="/">
+                ← Back to Home
+            </Link>
             <h2>Register</h2>
             <form onSubmit={handleSubmit}>
                 <input

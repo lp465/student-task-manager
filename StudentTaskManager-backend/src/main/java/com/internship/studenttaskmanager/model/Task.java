@@ -38,6 +38,9 @@ public class Task {
     @NotNull(message = "Due date is required")
     private LocalDate dueDate;
 
+    @Column(length = 60)
+    private String subject;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

@@ -55,6 +55,18 @@ VITE_API_BASE_URL=http://localhost:8080/api
 - `src/api/tasks.js` — task API client
 - `src/context/AuthContext.jsx` — auth state and localStorage persistence
 
+## Recent UI/UX updates (technical)
+
+- Landing page: application root `/` now serves a landing/marketing page with direct CTAs to `Login` and `Create account`.
+- App layout: authenticated routes use `AppLayout` which composes the `Sidebar` and main `app-content` area for consistent navigation.
+- Subject/category: `TaskForm.jsx` includes an optional `subject` select; `TaskCard.jsx` and task API payloads include `subject` (optional field).
+- Styling: `src/index.css` now centralizes tokens (colors, radii, shadows) to make theme changes predictable and maintainable.
+- Dashboard: improved overview grouping (`TaskStats`, `UpcomingDeadlines`) and a short insight card for urgent tasks.
+
+Compatibility notes:
+
+- These are UI-first changes; the frontend continues to use the same backend endpoints and request shapes. The `subject` field is optional and backward compatible with older task records.
+
 ## Notes
 
 This frontend connects to the backend API using `VITE_API_BASE_URL` and expects the backend to expose auth and task routes under `/api/users` and `/api/tasks`.

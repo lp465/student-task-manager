@@ -52,3 +52,7 @@
 - Priority filter toggles between All, Low, Medium, and High.
 - Search input filters tasks by title or description.
 - Combined filters and search work together to refine results.
+
+## Notes (v1.0.1)
+
+- The landing route `/` provides a pre-auth entry point. If a user is already authenticated the app redirects `/` to `/dashboard` to preserve the existing authenticated flow.

@@ -17,6 +17,7 @@ public class TaskResponseDTO {
     private String description;
     private TaskStatus status;
     private LocalDate dueDate;
+    private String subject;
     private Long userId;
     private String userName;
     private String userEmail;

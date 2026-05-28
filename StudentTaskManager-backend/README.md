@@ -73,3 +73,8 @@ The backend reads configuration values from environment variables:
 - `POST /api/tasks/create/{userId}` — create a task
 - `PUT /api/tasks/update/{taskId}?userId={userId}` — update a task
 - `DELETE /api/tasks/delete/{taskId}?userId={userId}` — delete a task
+
+## Recent backend notes (compatibility)
+
+- An optional `subject` field has been added to the `Task` model and DTOs to support frontend category/subject tags. This field is optional and defaults to empty/null for existing tasks so there are no migration steps required for current data.
+- No routes or request signatures were removed; the backend remains backward compatible with existing frontend clients.
