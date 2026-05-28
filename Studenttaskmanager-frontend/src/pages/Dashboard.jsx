@@ -57,8 +57,13 @@ function Dashboard() {
             navigate("/login");
             return;
         }
-        loadTasks();
-        loadSummary();
+
+        const initializeDashboard = async () => {
+            await loadTasks();
+            await loadSummary();
+        };
+
+        initializeDashboard();
     }, [filter, priority, user, navigate, loadTasks, loadSummary]);
 
     const handleChange = (e) => {
