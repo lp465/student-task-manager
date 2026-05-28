@@ -1,18 +1,18 @@
 package com.internship.studenttaskmanager.service;
 
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
 import com.internship.studenttaskmanager.dto.LoginRequestDTO;
 import com.internship.studenttaskmanager.dto.RegisterRequestDTO;
 import com.internship.studenttaskmanager.dto.UserResponseDTO;
 import com.internship.studenttaskmanager.exception.BadRequestException;
 import com.internship.studenttaskmanager.exception.DuplicateResourceException;
-import com.internship.studenttaskmanager.exception.ResourceNotFoundException;
 import com.internship.studenttaskmanager.model.User;
 import com.internship.studenttaskmanager.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
-import java.util.Optional;
 
 @Service
 public class UserService {

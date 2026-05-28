@@ -31,6 +31,10 @@ public class Task {
     @Column(nullable = false)
     private TaskStatus status = TaskStatus.PENDING;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TaskPriority priority = TaskPriority.MEDIUM;
+
     @NotNull(message = "Due date is required")
     private LocalDate dueDate;
 

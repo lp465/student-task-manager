@@ -1,5 +1,6 @@
 package com.internship.studenttaskmanager.dto;
 
+import com.internship.studenttaskmanager.model.TaskPriority;
 import com.internship.studenttaskmanager.model.TaskStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -16,6 +17,8 @@ public class TaskRequestDTO {
     private String description;
 
     private TaskStatus status;
+
+    private TaskPriority priority;
 
     @NotNull(message = "Due date is required")
     private LocalDate dueDate;

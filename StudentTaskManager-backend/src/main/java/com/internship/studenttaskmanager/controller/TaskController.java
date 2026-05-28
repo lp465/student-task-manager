@@ -3,6 +3,7 @@ package com.internship.studenttaskmanager.controller;
 import com.internship.studenttaskmanager.dto.ApiResponse;
 import com.internship.studenttaskmanager.dto.TaskRequestDTO;
 import com.internship.studenttaskmanager.dto.TaskResponseDTO;
+import com.internship.studenttaskmanager.dto.TaskSummaryDTO;
 import com.internship.studenttaskmanager.model.TaskStatus;
 import com.internship.studenttaskmanager.service.TaskService;
 import jakarta.validation.Valid;
@@ -36,6 +37,14 @@ public class TaskController {
         List<TaskResponseDTO> tasks = taskService.getTasksByUser(userId, status);
         return ResponseEntity.ok(
                 ApiResponse.success("Tasks retrieved successfully", tasks));
+    }
+
+    @GetMapping("/user/{userId}/summary")
+    public ResponseEntity<ApiResponse<TaskSummaryDTO>> getTaskSummary(
+            @PathVariable Long userId) {
+        TaskSummaryDTO summary = taskService.getTaskSummary(userId);
+        return ResponseEntity.ok(
+                ApiResponse.success("Task summary retrieved successfully", summary));
     }
 
     @PutMapping("/update/{taskId}")

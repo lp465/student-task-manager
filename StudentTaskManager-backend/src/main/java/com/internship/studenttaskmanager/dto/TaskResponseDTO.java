@@ -1,5 +1,6 @@
 package com.internship.studenttaskmanager.dto;
 
+import com.internship.studenttaskmanager.model.TaskPriority;
 import com.internship.studenttaskmanager.model.TaskStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,4 +20,5 @@ public class TaskResponseDTO {
     private Long userId;
     private String userName;
     private String userEmail;
+    private TaskPriority priority;
 }

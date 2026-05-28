@@ -1,13 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { getTasks, createTask, updateTask, deleteTask } from "../api/tasks";
+import {
+    getTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    getTaskSummary,
+} from "../api/tasks";
+import TaskForm from "../components/TaskForm";
+import TaskCard from "../components/TaskCard";
+import TaskFilters from "../components/TaskFilters";
+import TaskStats from "../components/TaskStats";
 
 function Dashboard() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [tasks, setTasks] = useState([]);
     const [filter, setFilter] = useState(null);
+    const [priority, setPriority] = useState(null);
+    const [search, setSearch] = useState("");
+    const [summary, setSummary] = useState(null);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
@@ -16,20 +29,12 @@ function Dashboard() {
         taskTitle: "",
         description: "",
         dueDate: "",
-        status: "PENDING",
+        priority: "MEDIUM",
     });
     const [editingTask, setEditingTask] = useState(null);
 
-    useEffect(() => {
-        if (!user) {
-            navigate("/login");
-            return;
-        }
-        loadTasks();
-    }, [filter]);
-
-    const loadTasks = async () => {
-        setLoading(true);
+    const loadTasks = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true);
         setError("");
         const result = await getTasks(user.id, filter);
         if (result.success) {
@@ -37,8 +42,24 @@ function Dashboard() {
         } else {
             setError(result.message);
         }
-        setLoading(false);
-    };
+        if (!silent) setLoading(false);
+    }, [user, filter]);
+
+    const loadSummary = useCallback(async () => {
+        const result = await getTaskSummary(user.id);
+        if (result.success) {
+            setSummary(result.data);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) {
+            navigate("/login");
+            return;
+        }
+        loadTasks();
+        loadSummary();
+    }, [filter, priority, user, navigate, loadTasks, loadSummary]);
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -57,18 +78,20 @@ function Dashboard() {
             const result = await updateTask(editingTask.id, user.id, form);
             if (result.success) {
                 setEditingTask(null);
-                setForm({ taskTitle: "", description: "", dueDate: "", status: "PENDING" });
+                setForm({ taskTitle: "", description: "", dueDate: "", priority: "MEDIUM" });
                 showSuccess("Task updated successfully");
-                loadTasks();
+                await loadTasks(true);
+                await loadSummary();
             } else {
                 setError(result.message);
             }
         } else {
             const result = await createTask(user.id, form);
             if (result.success) {
-                setForm({ taskTitle: "", description: "", dueDate: "", status: "PENDING" });
+                setForm({ taskTitle: "", description: "", dueDate: "", priority: "MEDIUM" });
                 showSuccess("Task created successfully");
-                loadTasks();
+                await loadTasks(true);
+                await loadSummary();
             } else {
                 setError(result.message);
             }
@@ -83,9 +106,28 @@ function Dashboard() {
             taskTitle: task.taskTitle,
             description: task.description,
             dueDate: task.dueDate,
-            status: task.status,
+            priority: task.priority || "MEDIUM",
         });
         window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    const handleCompleteTask = async (task) => {
+        setError("");
+        const updatedForm = {
+            taskTitle: task.taskTitle,
+            description: task.description,
+            dueDate: task.dueDate,
+            priority: task.priority || "MEDIUM",
+            status: "COMPLETED",
+        };
+        const result = await updateTask(task.id, user.id, updatedForm);
+        if (result.success) {
+            showSuccess("Task marked as completed");
+            await loadTasks(true);
+            await loadSummary();
+        } else {
+            setError(result.message);
+        }
     };
 
     const handleDelete = async (taskId) => {
@@ -93,7 +135,8 @@ function Dashboard() {
         const result = await deleteTask(taskId, user.id);
         if (result.success) {
             showSuccess("Task deleted successfully");
-            loadTasks();
+            await loadTasks(true);
+            await loadSummary();
         } else {
             setError(result.message);
         }
@@ -107,8 +150,24 @@ function Dashboard() {
     const handleCancelEdit = () => {
         setEditingTask(null);
         setError("");
-        setForm({ taskTitle: "", description: "", dueDate: "", status: "PENDING" });
+        setForm({ taskTitle: "", description: "", dueDate: "", priority: "MEDIUM" });
     };
+
+    const filteredTasks = tasks.filter((task) => {
+        // Apply status filter
+        if (filter !== null && task.status !== filter) return false;
+        
+        // Apply priority filter
+        if (priority !== null && task.priority !== priority) return false;
+        
+        // Apply search filter
+        const term = search.trim().toLowerCase();
+        if (!term) return true;
+        return (
+            task.taskTitle.toLowerCase().includes(term) ||
+            (task.description || "").toLowerCase().includes(term)
+        );
+    });
 
     return (
         <div className="dashboard">
@@ -119,106 +178,41 @@ function Dashboard() {
 
             {success && <p className="success-msg">{success}</p>}
 
-            <div className="task-form-section">
-                <h3>{editingTask ? "Edit Task" : "Add New Task"}</h3>
-                <form onSubmit={handleSubmit}>
-                    <input
-                        name="taskTitle"
-                        placeholder="Task Title"
-                        value={form.taskTitle}
-                        onChange={handleChange}
-                        required
-                    />
-                    <input
-                        name="description"
-                        placeholder="Description"
-                        value={form.description}
-                        onChange={handleChange}
-                    />
-                    <input
-                        name="dueDate"
-                        type="date"
-                        value={form.dueDate}
-                        onChange={handleChange}
-                        required
-                    />
-                    <select
-                        name="status"
-                        value={form.status}
-                        onChange={handleChange}
-                    >
-                        <option value="PENDING">Pending</option>
-                        <option value="COMPLETED">Completed</option>
-                    </select>
-                    {error && <p className="error">{error}</p>}
-                    <div className="form-buttons">
-                        <button type="submit" disabled={submitting}>
-                            {submitting
-                                ? "Saving..."
-                                : editingTask
-                                ? "Update Task"
-                                : "Add Task"}
-                        </button>
-                        {editingTask && (
-                            <button
-                                type="button"
-                                className="cancel-btn"
-                                onClick={handleCancelEdit}
-                            >
-                                Cancel
-                            </button>
-                        )}
-                    </div>
-                </form>
-            </div>
+            <TaskStats summary={summary} />
 
-            <div className="task-filter">
-                <button
-                    className={filter === null ? "active" : ""}
-                    onClick={() => setFilter(null)}
-                >
-                    All
-                </button>
-                <button
-                    className={filter === "PENDING" ? "active" : ""}
-                    onClick={() => setFilter("PENDING")}
-                >
-                    Pending
-                </button>
-                <button
-                    className={filter === "COMPLETED" ? "active" : ""}
-                    onClick={() => setFilter("COMPLETED")}
-                >
-                    Completed
-                </button>
-            </div>
+            <TaskForm
+                form={form}
+                onChange={handleChange}
+                onSubmit={handleSubmit}
+                editingTask={editingTask}
+                onCancel={handleCancelEdit}
+                error={error}
+                submitting={submitting}
+            />
+
+            <TaskFilters
+                filter={filter}
+                priority={priority}
+                search={search}
+                onFilterChange={setFilter}
+                onPriorityChange={setPriority}
+                onSearchChange={setSearch}
+            />
 
             <div className="task-list">
                 {loading ? (
                     <p className="loading">Loading tasks...</p>
-                ) : tasks.length === 0 ? (
+                ) : filteredTasks.length === 0 ? (
                     <p className="no-tasks">No tasks found.</p>
                 ) : (
-                    tasks.map((task) => (
-                        <div
+                    filteredTasks.map((task) => (
+                        <TaskCard
                             key={task.id}
-                            className={`task-card ${task.status.toLowerCase()}`}
-                        >
-                            <div className="task-info">
-                                <h4>{task.taskTitle}</h4>
-                                <p>{task.description}</p>
-                                <p>Due: {task.dueDate}</p>
-                                <span className={`status ${task.status.toLowerCase()}`}>
-                                    {task.status}
-                                </span>
-                            </div>
-                            <div className="task-actions">
-                                <button onClick={() => handleEdit(task)}>Edit</button>
-                                <button onClick={() => handleDelete(task.id)}>
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
+                            task={task}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                            onComplete={handleCompleteTask}
+                        />
                     ))
                 )}
             </div>

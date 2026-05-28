@@ -1,21 +1,23 @@
 package com.internship.studenttaskmanager.service;
 
-import com.internship.studenttaskmanager.dto.TaskRequestDTO;
-import com.internship.studenttaskmanager.dto.TaskResponseDTO;
-import com.internship.studenttaskmanager.exception.BadRequestException;
-import com.internship.studenttaskmanager.exception.ResourceNotFoundException;
-import com.internship.studenttaskmanager.model.Task;
-import com.internship.studenttaskmanager.model.TaskStatus;
-import com.internship.studenttaskmanager.model.User;
-import com.internship.studenttaskmanager.repository.TaskRepository;
-import com.internship.studenttaskmanager.repository.UserRepository;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import com.internship.studenttaskmanager.dto.TaskRequestDTO;
+import com.internship.studenttaskmanager.dto.TaskResponseDTO;
+import com.internship.studenttaskmanager.dto.TaskSummaryDTO;
+import com.internship.studenttaskmanager.exception.BadRequestException;
+import com.internship.studenttaskmanager.exception.ResourceNotFoundException;
+import com.internship.studenttaskmanager.model.Task;
+import com.internship.studenttaskmanager.model.TaskPriority;
+import com.internship.studenttaskmanager.model.TaskStatus;
+import com.internship.studenttaskmanager.model.User;
+import com.internship.studenttaskmanager.repository.TaskRepository;
+import com.internship.studenttaskmanager.repository.UserRepository;
 
 @Service
 @Transactional
@@ -41,7 +43,8 @@ public class TaskService {
                 task.getDueDate(),
                 task.getUser().getId(),
                 task.getUser().getName(),
-                task.getUser().getEmail()
+                task.getUser().getEmail(),
+                task.getPriority()
         );
     }
 
@@ -55,6 +58,7 @@ public class TaskService {
         task.setTaskTitle(dto.getTaskTitle());
         task.setDescription(dto.getDescription());
         task.setStatus(resolveStatus(dto.getStatus(), TaskStatus.PENDING));
+        task.setPriority(dto.getPriority() != null ? dto.getPriority() : TaskPriority.MEDIUM);
         task.setDueDate(dto.getDueDate());
         task.setUser(user);
         return convertToDTO(taskRepository.save(task));
@@ -77,11 +81,11 @@ public class TaskService {
         // Check task exists and belongs to this user
         Task task = taskRepository.findByIdAndUserId(taskId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Task not found or does not belong to this user"));
+                "Task not found or does not belong to this user"));
 
         // Status transition validation
-        if (task.getStatus() == TaskStatus.COMPLETED &&
-                dto.getStatus() == TaskStatus.PENDING) {
+        if (task.getStatus() == TaskStatus.COMPLETED
+                && dto.getStatus() == TaskStatus.PENDING) {
             throw new BadRequestException(
                     "Cannot revert a completed task back to pending");
         }
@@ -89,6 +93,7 @@ public class TaskService {
         task.setTaskTitle(dto.getTaskTitle());
         task.setDescription(dto.getDescription());
         task.setStatus(resolveStatus(dto.getStatus(), task.getStatus()));
+        task.setPriority(dto.getPriority() != null ? dto.getPriority() : task.getPriority());
         task.setDueDate(dto.getDueDate());
         return convertToDTO(taskRepository.save(task));
     }
@@ -96,7 +101,15 @@ public class TaskService {
     public void deleteTask(Long taskId, Long userId) {
         Task task = taskRepository.findByIdAndUserId(taskId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Task not found or does not belong to this user"));
+                "Task not found or does not belong to this user"));
         taskRepository.deleteById(task.getId());
+    }
+
+    public TaskSummaryDTO getTaskSummary(Long userId) {
+        User user = getUser(userId);
+        long completed = taskRepository.countByUserAndStatus(user, TaskStatus.COMPLETED);
+        long pending = taskRepository.countByUserAndStatus(user, TaskStatus.PENDING);
+        long highPriorityPending = taskRepository.countByUserAndStatusAndPriority(user, TaskStatus.PENDING, TaskPriority.HIGH);
+        return new TaskSummaryDTO(completed + pending, completed, pending, highPriorityPending);
     }
 }
