@@ -20,6 +20,16 @@ A full-stack web application for managing student academic tasks with authentica
 - Mobile-first responsive UI
 - Environment-based API configuration
 
+## Recent UI/UX improvements (v1.0.1)
+
+- Added a modern landing page served at `/` with clear CTAs for Login and Create account.
+- Introduced a persistent application layout (`AppLayout`) and `Sidebar` component used by authenticated routes to improve navigation and hierarchy.
+- Dashboard visual polish: overview cards, upcoming-deadlines panel, and a concise insight card to surface urgency.
+- Task card micro-UX: due-date chips with states (overdue / due soon / today / later), consistent priority and subject badges.
+- Frontend styling refactor: centralized CSS tokens (colors, radii, shadows, spacing) in `src/index.css` for consistent theming and easier maintenance.
+- Added optional persisted `subject`/category field on tasks (backward compatible; API unchanged for existing clients).
+- No backend API routes or flows were removed; all changes are UI-focused and preserve existing CRUD endpoints.
+
 ## Project Structure
 
 - `StudentTaskManager-backend/` — Spring Boot backend service
