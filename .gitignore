@@ -10,3 +10,30 @@ Studenttaskmanager-frontend/dist/
 # Environment
 .env
 *.env
+# local env and secrets
+.env.local
+.env.*.local
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# temp files and artifacts
+cookies.txt
+temp-smoke.ps1
+*.bak
+*.tmp
+
+# Java
+*.class
+*.jar
+
+# Node / frontend
+Studenttaskmanager-frontend/node_modules/
+Studenttaskmanager-frontend/dist/
+Studenttaskmanager-frontend/.turbo/
+
+# Build outputs
+target/

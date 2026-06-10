@@ -1,3 +1,7 @@
+# Archived: RELEASE_NOTES.md (moved on 2026-06-10)
+
+Original content preserved below.
+
 # Release Notes
 
 ## Student Task Manager v1.0.1

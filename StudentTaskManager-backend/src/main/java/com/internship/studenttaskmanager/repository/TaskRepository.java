@@ -29,4 +29,14 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     long countByUserAndPriority(User user, TaskPriority priority);
 
     long countByUserAndStatusAndPriority(User user, TaskStatus status, TaskPriority priority);
+
+    long countByUserAndDueDateBeforeAndStatus(User user, java.time.LocalDate date, TaskStatus status);
+
+    long countByUserAndDueDateBetweenAndStatus(User user, java.time.LocalDate start, java.time.LocalDate end, TaskStatus status);
+
+    @org.springframework.data.jpa.repository.Query("SELECT t.subject, COUNT(t) FROM Task t WHERE t.user = :user GROUP BY t.subject")
+    java.util.List<Object[]> countBySubject(@org.springframework.data.repository.query.Param("user") User user);
+
+    @org.springframework.data.jpa.repository.Query("SELECT t.priority, COUNT(t) FROM Task t WHERE t.user = :user GROUP BY t.priority")
+    java.util.List<Object[]> countByPriority(@org.springframework.data.repository.query.Param("user") User user);
 }

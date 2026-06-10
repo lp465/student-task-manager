@@ -7,12 +7,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.internship.studenttaskmanager.dto.LoginRequestDTO;
+import com.internship.studenttaskmanager.dto.LoginResponseDTO;
 import com.internship.studenttaskmanager.dto.RegisterRequestDTO;
 import com.internship.studenttaskmanager.dto.UserResponseDTO;
 import com.internship.studenttaskmanager.exception.BadRequestException;
 import com.internship.studenttaskmanager.exception.DuplicateResourceException;
 import com.internship.studenttaskmanager.model.User;
 import com.internship.studenttaskmanager.repository.UserRepository;
+import com.internship.studenttaskmanager.security.JwtUtils;
 
 @Service
 public class UserService {
@@ -22,6 +24,9 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtUtils jwtUtils;
 
     public UserResponseDTO registerUser(RegisterRequestDTO dto) {
         Optional<User> existing = userRepository.findByEmail(dto.getEmail());
@@ -44,5 +49,24 @@ public class UserService {
         }
         User u = user.get();
         return new UserResponseDTO(u.getId(), u.getName(), u.getEmail());
+    }
+
+    public LoginResponseDTO authenticate(LoginRequestDTO dto) {
+        Optional<User> user = userRepository.findByEmail(dto.getEmail());
+        if (user.isEmpty() || !passwordEncoder.matches(dto.getPassword(), user.get().getPassword())) {
+            throw new BadRequestException("Invalid email or password");
+        }
+        User u = user.get();
+        String token = jwtUtils.generateToken(u.getEmail());
+        UserResponseDTO resp = new UserResponseDTO(u.getId(), u.getName(), u.getEmail());
+        return new LoginResponseDTO(token, resp);
+    }
+
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    public String generateTokenForEmail(String email) {
+        return jwtUtils.generateToken(email);
     }
 }

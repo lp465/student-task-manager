@@ -28,7 +28,33 @@ export async function loginUser(data) {
     const response = await fetch(`${BASE_URL}/users/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify(data),
+    });
+    return handleResponse(response);
+  } catch {
+    return { success: false, message: "Server unreachable. Please try again." };
+  }
+}
+
+export async function refreshToken() {
+  try {
+    // send cookies to allow server to read HttpOnly refresh token
+    const response = await fetch(`${BASE_URL}/users/refresh`, {
+      method: "POST",
+      credentials: "include",
+    });
+    return handleResponse(response);
+  } catch {
+    return { success: false, message: "Server unreachable. Please try again." };
+  }
+}
+
+export async function logoutRequest() {
+  try {
+    const response = await fetch(`${BASE_URL}/users/logout`, {
+      method: "POST",
+      credentials: "include",
     });
     return handleResponse(response);
   } catch {

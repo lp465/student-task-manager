@@ -35,7 +35,7 @@ function MyTasks() {
     async (silent = false) => {
       if (!silent) setLoading(true);
       setError("");
-      const result = await getTasks(user.id, filter);
+      const result = await getTasks(filter);
       if (result.success) {
         setTasks(result.data);
       } else {
@@ -82,7 +82,7 @@ function MyTasks() {
     setSubmitting(true);
 
     if (editingTask) {
-      const result = await updateTask(editingTask.id, user.id, form);
+      const result = await updateTask(editingTask.id, form);
       if (result.success) {
         setEditingTask(null);
         setForm({
@@ -98,7 +98,7 @@ function MyTasks() {
         setError(result.message);
       }
     } else {
-      const result = await createTask(user.id, form);
+      const result = await createTask(form);
       if (result.success) {
         setForm({
           taskTitle: "",
@@ -140,7 +140,7 @@ function MyTasks() {
       priority: task.priority || "MEDIUM",
       status: "COMPLETED",
     };
-    const result = await updateTask(task.id, user.id, updatedForm);
+    const result = await updateTask(task.id, updatedForm);
     if (result.success) {
       showSuccess("Task marked as completed");
       await loadTasks(true);
@@ -151,7 +151,7 @@ function MyTasks() {
 
   const handleDelete = async (taskId) => {
     if (!window.confirm("Are you sure you want to delete this task?")) return;
-    const result = await deleteTask(taskId, user.id);
+    const result = await deleteTask(taskId);
     if (result.success) {
       showSuccess("Task deleted successfully");
       await loadTasks(true);

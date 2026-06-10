@@ -29,6 +29,11 @@ public class TaskService {
     @Autowired
     private UserRepository userRepository;
 
+    public com.internship.studenttaskmanager.model.User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new com.internship.studenttaskmanager.exception.ResourceNotFoundException("User not found"));
+    }
+
     private User getUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -45,7 +50,9 @@ public class TaskService {
                 task.getUser().getId(),
                 task.getUser().getName(),
                 task.getUser().getEmail(),
-                task.getPriority()
+                task.getPriority(),
+                task.getCreatedAt(),
+                task.getCompletedAt()
         );
     }
 
@@ -58,7 +65,11 @@ public class TaskService {
         Task task = new Task();
         task.setTaskTitle(dto.getTaskTitle());
         task.setDescription(dto.getDescription());
-        task.setStatus(resolveStatus(dto.getStatus(), TaskStatus.PENDING));
+        TaskStatus status = resolveStatus(dto.getStatus(), TaskStatus.PENDING);
+        task.setStatus(status);
+        if (status == TaskStatus.COMPLETED) {
+            task.setCompletedAt(java.time.LocalDateTime.now());
+        }
         task.setPriority(dto.getPriority() != null ? dto.getPriority() : TaskPriority.MEDIUM);
         task.setDueDate(dto.getDueDate());
         task.setSubject(dto.getSubject());
@@ -94,7 +105,12 @@ public class TaskService {
 
         task.setTaskTitle(dto.getTaskTitle());
         task.setDescription(dto.getDescription());
-        task.setStatus(resolveStatus(dto.getStatus(), task.getStatus()));
+        TaskStatus newStatus = resolveStatus(dto.getStatus(), task.getStatus());
+        // If changing to COMPLETED set completedAt timestamp
+        if (task.getStatus() != TaskStatus.COMPLETED && newStatus == TaskStatus.COMPLETED) {
+            task.setCompletedAt(java.time.LocalDateTime.now());
+        }
+        task.setStatus(newStatus);
         task.setPriority(dto.getPriority() != null ? dto.getPriority() : task.getPriority());
         task.setDueDate(dto.getDueDate());
         task.setSubject(dto.getSubject());

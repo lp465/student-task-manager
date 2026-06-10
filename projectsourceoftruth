@@ -1,0 +1,421 @@
+SECTION 1: PROJECT OVERVIEW (UPDATED)
+
+Project Purpose
+
+- Full-stack Student Task Manager: let students create, track, prioritize, and complete tasks (assignments, projects, study items) with analytics and a responsive UI.
+
+Main Problem Solved
+
+- Centralize student tasks with due dates, priority and subject tagging, easy filtering, and a small analytics dashboard to surface urgency and completion metrics.
+
+Target Users
+
+- Students and educators needing a light task-tracking dashboard.
+
+High-Level Workflow (current)
+
+- User registers and logs in via frontend forms. Login returns a short-lived JWT access token and the server issues a persistent refresh token stored server-side and sent as an HttpOnly cookie.
+- Frontend persists auth (access token + user) in `localStorage` and attaches `Authorization: Bearer <token>` to API requests. On 401 the client attempts `POST /api/users/refresh` (using cookie) to obtain a new access token and retries the original request once.
+- Users create tasks with title, description, optional subject, due date and priority; tasks default to `PENDING` and `MEDIUM` priority when omitted.
+- Users view tasks, filter by status and priority, search by text, edit tasks, mark tasks `COMPLETED` (no revert to `PENDING`), and delete tasks.
+- Dashboard fetches analytics (completion %, overdue, dueThisWeek, priority/subject distributions) which frontend renders with Chart.js via react-chartjs-2.
+
+Major Modules Implemented (current)
+
+- Frontend (React + Vite, pnpm): `src/context/AuthContext.jsx` (auth + localStorage), API clients (`src/api/auth.js`, `src/api/tasks.js`, `src/api/analytics.js`) with refresh-on-401 logic, components: `AppLayout`, `Sidebar`, `TaskForm`, `TaskCard`, `TaskFilters`, `TaskStats`, charts and pages: `Landing`, `Login`, `Register`, `Dashboard`, `MyTasks`.
+- Backend (Spring Boot, Java 21, Maven): controllers, services, repositories, DTOs, JPA entities, security utilities for JWT, refresh token entity/service, `JwtAuthenticationFilter`, `SecurityConfig` with global CORS configuration, and `RefreshToken` persistence.
+
+SECTION 2: FRONTEND ANALYSIS (UPDATED)
+
+Notes: the frontend now includes refresh-on-401 logic in API clients and persists both `token` and `user` in `localStorage`. The dev workflow uses `pnpm` and Vite; typical dev port observed is 5175.
+
+Primary components and behaviors (high level)
+
+- `AuthContext.jsx`: manages `auth` state { token, user }, persists to `localStorage`, exposes `login`, `logout`, and attaches token to API requests.
+- `src/api/auth.js`: `loginUser`, `refreshToken`, `logoutRequest` — login posts credentials (server sets HttpOnly refresh cookie), refresh posts to `/api/users/refresh` sending cookie, logout posts `/api/users/logout` to clear server-side refresh token and cookie.
+- `src/api/tasks.js` and `src/api/analytics.js`: attach `Authorization` header with Bearer token; on 401 attempt `refreshToken()` once and retry request; if refresh fails, sign out and redirect to `/login`.
+- UI: `Dashboard` renders analytics charts using `react-chartjs-2`; `MyTasks` uses `TaskForm`, `TaskCard`, `TaskFilters` and supports create/edit/complete/delete flows. `TaskForm` requires `taskTitle` and `dueDate` on create; update validation enforces dueDate presence.
+
+Dev notes
+
+- Use `pnpm install` and `pnpm dev` in `Studenttaskmanager-frontend` for local development.
+- Build for production with `pnpm build`; Vite outputs `dist/`.
+
+SECTION 3: BACKEND ANALYSIS (UPDATED)
+
+Package root: `com.internship.studenttaskmanager`.
+
+Key additions since the original file
+
+- JWT utilities (`JwtUtils`) for signing/validating access tokens using `JWT_SECRET` from env.
+- `JwtAuthenticationFilter` that validates `Authorization: Bearer` header and sets SecurityContext for requests.
+- `RefreshToken` entity, `RefreshTokenRepository`, and `RefreshTokenService` to persist refresh tokens server-side.
+- `UserController` updated to set HttpOnly `refreshToken` cookie on login and expose `/api/users/refresh` and `/api/users/logout` endpoints.
+- `SecurityConfig` replaced per-controller CORS with a global `CorsConfigurationSource` supporting multiple dev origins and a `frontend.production.origin` for prod locking; security chain is stateless and allows the JWT filter to populate authentication.
+
+Controllers / endpoints (high level)
+
+- `POST /api/users/register` — register
+- `POST /api/users/login` — login: returns access token in response body; server sets HttpOnly `refreshToken` cookie
+- `POST /api/users/refresh` — reads `refreshToken` cookie, validates persisted token, returns new access token
+- `POST /api/users/logout` — removes refresh token server-side and clears cookie
+- `POST /api/tasks/create` — creates task for authenticated principal (controller now relies on authentication principal rather than passing userId in client-supplied params)
+- `GET /api/tasks` — list tasks of authenticated user (filtering via query params)
+- `GET /api/analytics/summary` — analytics for authenticated user
+
+Security and auth behavior
+
+- Access tokens: JWT signed with `JWT_SECRET`; short-lived based on `JWT_EXPIRATION_MS`.
+- Refresh tokens: long-lived (`JWT_REFRESH_EXPIRATION_MS`), stored in DB and issued as HttpOnly cookie named `refreshToken`.
+- Client flow: attach `Authorization` header with access token; on 401, call `/api/users/refresh` (cookie included automatically by browser when same-site rules allow) to get new access token.
+- CORS: global config now uses allowed origin patterns including `http://localhost:*` for development and uses `frontend.production.origin` when set in production.
+
+Configuration files
+
+- `src/main/resources/application.properties` reads JWT and datasource settings from env variables. Defaults exist for local dev but production must set secrets.
+
+Notes
+
+- The backend now enforces authentication via JWT for task and analytics endpoints (JwtAuthenticationFilter sets principal to email). Older approach that relied on client-provided `userId` in path/query is deprecated by new auth flow.
+
+SECTION 4: DATABASE RECONSTRUCTION
+
+Entity Inventory Table
+
+| Entity / Table Name | Fields (column name : type)                                                                                                                                                         | Primary Key | Nullable constraints                                                                         | Notes                                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| users               | id : BIGINT (IDENTITY), name : VARCHAR, email : VARCHAR (unique), password : VARCHAR                                                                                                | id          | name,email,password NOT NULL                                                                 | `email` unique; password is stored hashed (BCrypt).                                              |
+| tasks               | id : BIGINT (IDENTITY), task_title : VARCHAR, description : TEXT, status : VARCHAR (enum), priority : VARCHAR (enum), due_date : DATE, subject : VARCHAR(60), user_id : BIGINT (FK) | id          | task_title NOT NULL, status NOT NULL, priority NOT NULL, due_date NOT NULL, user_id NOT NULL | `user_id` FK to `users(id)`; `status` values: PENDING, COMPLETED; `priority`: LOW, MEDIUM, HIGH. |
+
+Notes on column naming: JPA default mapping uses field names; likely column names are `task_title`? The entity field is `taskTitle` and JPA defaults to `task_title` in many dialects only if a naming strategy is set — code does not explicitly set column names for `taskTitle` so actual column may be `task_title` depending on Spring Boot's implicit naming strategy. The table names are explicit: `users` and `tasks`.
+
+Relationships
+
+- `Task.user` is `@ManyToOne` to `User` with `@JoinColumn(name = "user_id")`.
+- Relationship cardinality: Many Tasks -> One User.
+- Referential integrity: `user_id` non-null, so every Task must belong to a User.
+
+Relationship Summary
+
+- One `User` (users.id) has many `Task` rows (tasks.user_id).
+- No other entity relationships exist.
+
+Text-based ER Description
+
+- Users(id, name, email, password)
+- Tasks(id, taskTitle, description, status, priority, dueDate, subject, user_id)
+- Tasks.user_id -> Users.id (Many-to-One)
+
+SECTION 5: API INVENTORY
+
+All controller endpoints and exact request/response shapes (based on controller signatures and DTOs). Responses are wrapped in `ApiResponse<T>`.
+
+| HTTP Method | Endpoint URL                       | Purpose                                                                       | Request Parameters                               | Request Body                                                       | Response Structure                                                                                                                                                                                  | Authentication Required                                               |
+| ----------- | ---------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| POST        | `/api/users/register`              | Register a new user                                                           | none                                             | `RegisterRequestDTO` JSON: `{ name, email, password }`             | `ApiResponse<UserResponseDTO>`: `{ success:true, message:'User registered successfully', data:{ id, name, email } }`                                                                                | No (public)                                                           |
+| POST        | `/api/users/login`                 | Login existing user (verify credentials)                                      | none                                             | `LoginRequestDTO` JSON: `{ email, password }`                      | `ApiResponse<UserResponseDTO>`: `{ success:true, message:'Login successful', data:{ id, name, email } }` on success; on failure controller throws BadRequestException -> 400 with ApiResponse error | No (public)                                                           |
+| POST        | `/api/tasks/create/{userId}`       | Create a task for given user                                                  | Path: `userId` (Long)                            | `TaskRequestDTO` JSON: `{ taskTitle, description, status? (PENDING | COMPLETED), priority? (LOW                                                                                                                                                                          | MEDIUM                                                                | HIGH), dueDate (ISO date), subject? }` | `ApiResponse<TaskResponseDTO>`: `{ success:true, message:'Task created successfully', data: { id, taskTitle, description, status, dueDate, subject, userId, userName, userEmail, priority } }` | No (server does not enforce authentication) |
+| GET         | `/api/tasks/user/{userId}`         | Retrieve tasks for a user (optionally filter by status)                       | Path: `userId`; Query `status` (TaskStatus enum) | none                                                               | `ApiResponse<List<TaskResponseDTO>>`                                                                                                                                                                | No                                                                    |
+| GET         | `/api/tasks/user/{userId}/summary` | Get summary counts (completed, pending, high priority pending, total)         | Path: `userId`                                   | none                                                               | `ApiResponse<TaskSummaryDTO>`: (service returns counts: total, completed, pending, highPriorityPending)                                                                                             | No                                                                    |
+| PUT         | `/api/tasks/update/{taskId}`       | Update a task (ensures task belongs to user and status transitions validated) | Path: `taskId`; Query: `userId` (Long)           | `TaskRequestDTO` JSON                                              | `ApiResponse<TaskResponseDTO>`: updated task                                                                                                                                                        | No (but operation checks task belongs to provided userId server-side) |
+| DELETE      | `/api/tasks/delete/{taskId}`       | Delete a task (ensures task belongs to user)                                  | Path: `taskId`; Query: `userId` (Long)           | none                                                               | `ApiResponse<String>` with success message and null data                                                                                                                                            | No (but server checks ownership using userId)                         |
+
+Authentication Required: The codebase does not use server-side session or token-based authentication. The controllers are publicly accessible (no Spring Security HTTP restrictions). The API relies on the caller providing `userId` path/query params to scope operations; service methods verify existence and ownership (e.g., `findByIdAndUserId`). Therefore, "Authentication Required" is `No` from the server enforcement perspective, but client usage expects a logged-in user and passes `user.id` from localStorage.
+
+SECTION 6: AUTHENTICATION ANALYSIS
+
+Registration workflow (actual implementation):
+
+- Frontend `Register` page posts to `POST /api/users/register` with `{ name, email, password }`.
+- Backend `UserController.register` invokes `UserService.registerUser(RegisterRequestDTO)`.
+- `UserService.registerUser` checks `userRepository.findByEmail(dto.getEmail())`; if present, throws `DuplicateResourceException` (HTTP 409). If not, creates a `User` entity and sets `password` to `passwordEncoder.encode(dto.getPassword())` using BCrypt, saves user, and returns `UserResponseDTO` (id, name, email).
+- Controller returns `ApiResponse.success("User registered successfully", UserResponseDTO)`.
+
+Login workflow (actual implementation):
+
+- Frontend `Login` page posts to `POST /api/users/login` with `{ email, password }`.
+- Backend `UserController.login` invokes `UserService.loginUser(LoginRequestDTO)`.
+- `UserService.loginUser` looks up user by email; if absent or `passwordEncoder.matches` fails, throws `BadRequestException` (HTTP 400). On match, returns `UserResponseDTO`.
+- Controller returns `ApiResponse.success("Login successful", UserResponseDTO)`.
+- Frontend stores the returned `UserResponseDTO` in `localStorage` and sets `AuthContext` state with `login(result.data)`.
+
+Password storage mechanism:
+
+- Passwords are hashed using `BCryptPasswordEncoder` (configured in `PasswordEncoderConfig` as a `PasswordEncoder` bean). Stored in `users.password` column.
+- `User` entity marks the `password` field as `@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)` to avoid returning it in JSON responses.
+
+BCrypt usage:
+
+- `PasswordEncoderConfig.passwordEncoder()` returns `new BCryptPasswordEncoder()`.
+- `UserService.registerUser` calls `passwordEncoder.encode(dto.getPassword())` before saving.
+- `UserService.loginUser` calls `passwordEncoder.matches(dto.getPassword(), user.get().getPassword())`.
+
+Session persistence mechanism:
+
+- Backend: No server-side session, token, or JWT generation present in code.
+- Frontend: `AuthContext` stores the `user` object returned from login in `localStorage` under key `user`.
+- Logged-in state is persisted across reloads by reading `JSON.parse(localStorage.getItem('user'))` at `AuthProvider` initialization.
+
+LocalStorage usage:
+
+- Used to persist authenticated user info: `localStorage.setItem('user', JSON.stringify(userData))` on login; `localStorage.removeItem('user')` on logout.
+- No tokens or expiration stored.
+
+Authorization logic:
+
+- Server-side: Minimal authorization checks limited to ensuring operations act on resources belonging to provided `userId` (e.g., `findByIdAndUserId` in `TaskService` and `TaskRepository`). There is no enforcement of identity beyond the provided `userId` parameter (no auth tokens, no session binding).
+- Client-side: Route-level guard via `AppLayout` and `RootRoute`/`RedirectIfAuthed` that redirect based on presence of `user` in `AuthContext` (which is loaded from `localStorage`).
+
+SECTION 7: BUSINESS LOGIC ANALYSIS
+
+Task Creation
+
+- Implemented in `TaskService.createTask(Long userId, TaskRequestDTO dto)`.
+- Behavior: Loads `User` by id (throws `ResourceNotFoundException` if not found), constructs new `Task` with provided fields.
+  - `status` resolved via `resolveStatus(dto.getStatus(), TaskStatus.PENDING)` -> default to `PENDING` when not supplied.
+  - `priority` set to `dto.getPriority()` if present else `TaskPriority.MEDIUM`.
+  - `dueDate` copied from DTO (type `LocalDate`).
+  - `subject`, `taskTitle`, `description` set from DTO.
+- Saves via `taskRepository.save(task)` and returns `TaskResponseDTO`.
+
+Task Editing
+
+- Implemented in `TaskService.updateTask(Long taskId, Long userId, TaskRequestDTO dto)`.
+- Behavior: Verifies `Task` exists and belongs to `userId` using `taskRepository.findByIdAndUserId(taskId, userId)`; if not found throws `ResourceNotFoundException`.
+- Status transition rule: if existing task status is `COMPLETED` and incoming dto.status is `PENDING`, throw `BadRequestException("Cannot revert a completed task back to pending")` (prevents reverting completed -> pending).
+- Updates fields: `taskTitle`, `description`, `status` via `resolveStatus(dto.getStatus(), task.getStatus())` (keeps existing status if dto.status null), `priority` (fallback to existing), `dueDate`, `subject`.
+- Saves and returns updated DTO.
+
+Task Deletion
+
+- Implemented in `TaskService.deleteTask(Long taskId, Long userId)`.
+- Behavior: Ensures task belongs to `userId` via `findByIdAndUserId` (throws `ResourceNotFoundException` if not), then `taskRepository.deleteById(task.getId())`.
+
+Task Completion
+
+- Completion is modeled as a status change to `COMPLETED`.
+- Frontend `TaskCard` offers a Complete button that triggers `updateTask` with `status: 'COMPLETED'` in the payload (MyTasks.handleCompleteTask builds an `updatedForm` with status `COMPLETED`).
+- Backend permits status change to COMPLETED; prevents reversing COMPLETED -> PENDING.
+
+Priority Management
+
+- Priorities are an enum `TaskPriority { LOW, MEDIUM, HIGH }`.
+- Default priority is MEDIUM if not provided during create; update preserves existing priority when DTO priority is null.
+- Backend exposes counting by priority (TaskRepository.countByUserAndPriority) used in summary.
+
+Status Tracking
+
+- Status is an enum `TaskStatus { PENDING, COMPLETED }`.
+- Backend persists status as String enum.
+- Frontend treats status for filtering and for showing due date chips only when status is PENDING.
+
+Search
+
+- No server-side search endpoint. The frontend implements client-side search on fetched tasks: filters tasks by lowercased `taskTitle`, `description`, or `subject` containing search term.
+
+Filtering
+
+- Backend supports filtering by status via query parameter `status` on `GET /api/tasks/user/{userId}` mapping to `TaskStatus` enum; the frontend requests tasks with status argument only when `filter` state is applied? (Frontend `getTasks(user.id, filter)` passes `filter` from state — the API call is implemented to attach `?status=` only when `status` argument passed to `getTasks` in `src/api/tasks.js`.)
+- Frontend provides client-side priority filter and status filter (status may also be passed to backend but priority filtering is done client-side).
+
+Dashboard Statistics
+
+- `TaskService.getTaskSummary(Long userId)` computes counts:
+  - `completed = countByUserAndStatus(user, COMPLETED)`
+  - `pending = countByUserAndStatus(user, PENDING)`
+  - `highPriorityPending = countByUserAndStatusAndPriority(user, PENDING, HIGH)`
+  - returns `TaskSummaryDTO(total=completed+pending, completed, pending, highPriorityPending)`.
+- Frontend `Dashboard` calls `getTaskSummary` and displays the three cards: Completed, Pending, High Priority Pending.
+
+Actual Implementation Behavior Notes
+
+- Ownership checks: For update/delete operations, backend validates that the `taskId` belongs to provided `userId` (`findByIdAndUserId`). The API requires caller to pass `userId` in path or query param; the server relies on that to validate ownership.
+- No role-based logic or multi-user access control beyond ownership checks by ID.
+
+SECTION 8: VALIDATIONS
+
+Frontend Validations (from components and HTML inputs)
+
+| Location                             | Validation Type               | Fields                                                    | Details                                                                                                                |
+| ------------------------------------ | ----------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `src/pages/Register.jsx`             | Required fields               | `name`, `email`, `password`                               | `<input required>` ensures non-empty; `type=email` for email format enforcement by browser                             |
+| `src/pages/Login.jsx`                | Required fields               | `email`, `password`                                       | `<input required>` and `type=email` for browser-level checks                                                           |
+| `src/components/TaskForm.jsx`        | Required fields & input types | `taskTitle` (required), `dueDate` (required, `type=date`) | Browser-enforced required; `type=date` helps date formatting; select for `priority` restricts to enum values displayed |
+| `src/pages/MyTasks.jsx` & components | Date validation for UI        | `dueDate`                                                 | JS helpers (`isValidDate`) check string -> Date parsing for UI features such as due-in X days                          |
+| `src/components/TaskCard.jsx`        | Confirm prompts               | Complete/Delete actions                                   | `window.confirm` used to confirm destructive actions                                                                   |
+
+Backend Validations (DTOs and Entities, enforced via Jakarta Validation)
+
+| Location             | Validation Annotation                                           | Field                  | Effect                                                                                                      |
+| -------------------- | --------------------------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `RegisterRequestDTO` | `@NotBlank` on `name`, `email`, `password`; `@Email` on `email` | `name,email,password`  | Will produce `MethodArgumentNotValidException` -> 400 with field-level messages if invalid                  |
+| `LoginRequestDTO`    | `@NotBlank` on `email`,`password`; `@Email` on `email`          | `email,password`       | 400 on invalid inputs                                                                                       |
+| `TaskRequestDTO`     | `@NotBlank` on `taskTitle`; `@NotNull` on `dueDate`             | `taskTitle`, `dueDate` | 400 if missing; `dueDate` is `LocalDate` and expected in JSON in ISO date format                            |
+| `User` entity        | `@NotBlank` on `name,email`, `@Email` on `email`                | `name,email`           | Entity-level constraints also exist; validation will occur if entity validated by controller/service inputs |
+| `Task` entity        | `@NotBlank` on `taskTitle`, `@NotNull` on `dueDate`             | `taskTitle,dueDate`    | Same as DTO constraints; JPA also enforces `nullable = false` on some columns                               |
+
+Business rule validations (server-side)
+
+- Duplicate email on registration -> `DuplicateResourceException` -> 409 CONFLICT.
+- Invalid login credentials -> `BadRequestException` (400).
+- `updateTask` prevents reverting a COMPLETED task to PENDING -> `BadRequestException` (400).
+- Ownership checks on update/delete -> `ResourceNotFoundException` (404) when mismatched or missing.
+
+SECTION 9: APPLICATION WORKFLOW
+
+Step-by-step user journey (exact code-based flow):
+
+1. Registration
+
+- User visits `/register` (frontend `Register.jsx`), fills `name,email,password` and submits.
+- Frontend posts to `POST /api/users/register`.
+- Backend validates DTO; if valid and email not existing, `UserService` encodes password with BCrypt and saves `User`. Backend responds with `UserResponseDTO` and success message.
+- Frontend navigates the user to `/login` on success.
+
+2. Login
+
+- User visits `/login`, submits `email,password`.
+- Frontend posts to `POST /api/users/login`.
+- Backend validates DTO, looks up user, checks password via `PasswordEncoder.matches`. On success it returns `UserResponseDTO`.
+- Frontend `Login.jsx` receives response, calls `login(result.data)` from `AuthContext`, which stores the user object in `localStorage` and sets in-memory `user`. Frontend navigates to `/dashboard`.
+
+3. Dashboard Access
+
+- Route `/dashboard` is protected by `AppLayout` which checks `useAuth().user`; if missing, it redirects to `/login`.
+- Dashboard component uses `getTasks(user.id)` and `getTaskSummary(user.id)` to populate UI. It computes overdue/due-this-week counts client-side.
+
+4. Task Creation
+
+- From `/tasks` (`MyTasks.jsx`), user fills `TaskForm` and submits.
+- Frontend calls `createTask(user.id, form)` which sends `POST /api/tasks/create/{userId}` with `TaskRequestDTO` JSON.
+- Backend `TaskService.createTask` validates and saves a `Task` (defaults: status PENDING, priority MEDIUM if missing) and returns `TaskResponseDTO`.
+- Frontend resets form and reloads tasks.
+
+5. Task Update
+
+- User clicks Edit on a task (`TaskCard`), frontend populates `TaskForm` with task data and sets `editingTask`.
+- On submit, `MyTasks` calls `updateTask(taskId, user.id, form)` sending `PUT /api/tasks/update/{taskId}?userId={user.id}`.
+- Backend checks ownership `findByIdAndUserId`, applies update rules (prevents COMPLETED->PENDING), saves, and returns updated `TaskResponseDTO`.
+- Frontend refreshes list and clears editing state.
+
+6. Task Completion
+
+- User clicks Complete on a PENDING task; frontend confirms via `window.confirm` and then calls `updateTask` with `status: 'COMPLETED'`.
+- Backend performs update and returns updated data. Frontend reloads tasks and shows success.
+
+7. Search & Filtering
+
+- Frontend fetches tasks (optionally with `status` query param when a status filter is applied) and applies client-side search (filtering by title/description/subject) and priority filter.
+- No server-side full-text search; filtering by priority is done client-side.
+
+8. Logout
+
+- User clicks Logout in `Sidebar`, which calls `logout()` from `AuthContext` that clears `user` state and `localStorage.removeItem('user')`.
+- Protected routes redirect to `/login` after logout.
+
+SECTION 10: TESTING EVIDENCE
+
+Automated tests found
+
+- Backend: One Spring Boot smoke test: `StudentTaskManagerApplicationTests.contextLoads()` located at `src/test/java/com/internship/studenttaskmanager/StudentTaskManagerApplicationTests.java`. This test only verifies application context loads.
+- Additional test output artifacts are present in `target/surefire-reports` (indicating test runs); however, no unit tests for services or controllers were found.
+
+Frontend: No automated test files located under `Studenttaskmanager-frontend/src` (no Jest / vitest test files found).
+
+Manual testing evidence
+
+- None explicit in code. There are no test fixtures or documented manual test scripts in repository files searched.
+
+Conclusion about test coverage
+
+- Minimal automated testing exists (single context-load integration test). No additional unit or integration test suites detected.
+- Statement: "No automated test suite found." would be inaccurate; instead: "Only a single Spring Boot context-load test found; no substantive automated unit/integration tests present."
+
+SECTION 11: DEPLOYMENT & CONFIGURATION
+
+`application.properties` (exact settings found in `src/main/resources/application.properties`):
+
+- `spring.application.name=StudentTaskManager`
+- `spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/StudentTaskManagement}`
+- `spring.datasource.username=${SPRING_DATASOURCE_USERNAME:root}`
+- `spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:mysql}`
+- `spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver`
+- `spring.jpa.hibernate.ddl-auto=update` (schema auto-update)
+- `spring.jpa.show-sql=true`
+- `spring.jpa.properties.hibernate.format_sql=true`
+- `spring.jpa.open-in-view=false`
+- `server.port=${SERVER_PORT:8080}`
+
+Database configuration
+
+- JDBC MySQL default URL: `jdbc:mysql://localhost:3306/StudentTaskManagement` unless `SPRING_DATASOURCE_URL` environment variable provided.
+- Username default: `root` (overridable with `SPRING_DATASOURCE_USERNAME`).
+- Password default: `mysql` (overridable with `SPRING_DATASOURCE_PASSWORD`).
+- Hibernate DDL auto is set to `update`, enabling runtime schema changes (creates/updates tables automatically based on entities).
+
+CORS configuration
+
+- Controllers annotate `@CrossOrigin(origins = "*")` on controller classes (`UserController` and `TaskController`) enabling cross-origin requests from any origin for those endpoints.
+- No global CORS filter configured; per-controller `@CrossOrigin` used.
+
+Environment variables referenced
+
+- `SPRING_DATASOURCE_URL` (overrides JDBC URL)
+- `SPRING_DATASOURCE_USERNAME` (DB username)
+- `SPRING_DATASOURCE_PASSWORD` (DB password)
+- `SERVER_PORT` (overrides `server.port`)
+- Frontend: `import.meta.env.VITE_API_BASE_URL` (used in `src/api/*` to override default API base URL)
+
+Production configuration
+
+- No environment-specific production config files found (no `application-prod.properties` or similar).
+- `spring.jpa.hibernate.ddl-auto=update` in production may alter schema at runtime; this is explicitly set in the default properties.
+
+SECTION 12: IMPORTANT FACTS FOR REPORT WRITING
+
+Features that definitely exist
+
+- User registration and login endpoints with BCrypt password hashing.
+- Frontend React app with `Login`, `Register`, `Dashboard`, `MyTasks`, and `Landing` pages.
+- CRUD for tasks (create, read, update, delete) with ownership checks at server side via `userId` params.
+- Task summary counts (completed, pending, high-priority pending) and upcoming deadlines UI.
+- Client-side session persistence via `localStorage` storing the `UserResponseDTO`.
+- Basic validation using Jakarta Validation annotations on DTOs and entity fields (e.g., `@NotBlank`, `@Email`, `@NotNull`).
+- `GlobalExceptionHandler` returns consistent `ApiResponse` error structures and handles validation errors with field-level messages.
+- CORS allowed for all origins via `@CrossOrigin` on controllers.
+
+Features that definitely do NOT exist
+
+- No server-issued authentication tokens (JWT) or server-side session mechanism.
+- No Spring Security HTTP configuration enforcing route protection (i.e., endpoints are not protected by authentication middleware).
+- No server-side role-based access control beyond simple ownership checks using provided `userId` parameters.
+- No server-side search by free-text beyond filtering by `TaskStatus` (status) on the `GET /api/tasks/user/{userId}` endpoint.
+- No frontend or backend unit/integration test suite beyond a single context-load test.
+
+Potential limitations (visible in code)
+
+- Security: API trusts caller-provided `userId` to identify the acting user; without tokens, a malicious client could pass another user's id to access or modify their tasks if not otherwise restricted at network or API gateway level.
+- Client-side persistence stores only a `UserResponseDTO` in localStorage; no token expiration, no refresh mechanism, no password reset flow.
+- Search is client-side after fetching tasks; with large datasets the approach may be inefficient.
+- `spring.jpa.hibernate.ddl-auto=update` in production could cause unintended schema changes if entities change.
+- No email verification or multi-factor authentication.
+
+Technical decisions visible in code
+
+- Use of DTO layer to separate internal entities from API payloads (`TaskRequestDTO`, `TaskResponseDTO`, `UserResponseDTO`).
+- Consistent response wrapper `ApiResponse<T>` used for both success and error responses.
+- Password handling uses `BCryptPasswordEncoder` bean — strong hashing chosen.
+- Lightweight client-side auth using `localStorage` and React Context rather than tokens or cookies.
+- Ownership enforced at service/repository level by `findByIdAndUserId` queries rather than via a security principal.
+
+Areas where report writers must avoid exaggeration
+
+- Do not claim server-side authenticated sessions or token-based security as implemented — they are not present.
+- Do not claim server-side authorization beyond `userId` ownership checks.
+- Do not claim test coverage or automated QA beyond the single context-load test.
+
+---
+
+End of inventory.
+
+(Generated from code in the workspace: frontend files under `Studenttaskmanager-frontend/src` and backend files under `StudentTaskManager-backend/src/main/java`, and backend `application.properties`. All statements are based on the implemented code.)

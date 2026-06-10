@@ -1,3 +1,7 @@
+# Archived: SETUP.md (moved on 2026-06-10)
+
+Original content preserved below.
+
 # Project Setup
 
 ## Prerequisites

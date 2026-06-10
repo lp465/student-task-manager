@@ -1,0 +1,15 @@
+Entity,Table,Field,Type,PrimaryKey,ForeignKey,Nullable,Notes
+User,users,id,Long,YES,,NO,Generated identity
+User,users,name,String,NO,,NO,`@NotBlank`
+User,users,email,String,NO,,NO,Unique,`@Email`
+User,users,password,String,NO,,NO,WRITE_ONLY
+Task,tasks,id,Long,YES,,NO,Generated identity
+Task,tasks,taskTitle,String,NO,,NO,`@NotBlank`
+Task,tasks,description,Text,NO,,YES,
+Task,tasks,status,String(enum),NO,,NO,Enum TaskStatus {PENDING,COMPLETED}
+Task,tasks,priority,String(enum),NO,,NO,Enum TaskPriority {LOW,MEDIUM,HIGH}
+Task,tasks,dueDate,Date,NO,,NO,`@NotNull`
+Task,tasks,subject,String,NO,,YES,Length 60
+Task,tasks,user_id,Long,NO,users.id,NO,ManyToOne -> User
+Task,tasks,createdAt,LocalDateTime,NO,,YES,`@CreationTimestamp`
+Task,tasks,completedAt,LocalDateTime,NO,,YES,Set when status -> COMPLETED

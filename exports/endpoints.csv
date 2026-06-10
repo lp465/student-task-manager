@@ -1,0 +1,9 @@
+Method,Path,Purpose,Request Params,Request Body,Response,Auth Required
+POST,/api/users/register,Register new user,,RegisterRequestDTO -> {name,email,password},ApiResponse<UserResponseDTO>,No
+POST,/api/users/login,Login and return JWT,,LoginRequestDTO -> {email,password},ApiResponse<LoginResponseDTO {token,user}>,No
+POST,/api/tasks/create,Create a task for authenticated user,,TaskRequestDTO -> {taskTitle,description,status,priority,dueDate,subject},ApiResponse<TaskResponseDTO>,Yes
+GET,/api/tasks,Get tasks for authenticated user,Optional query: status (PENDING/COMPLETED),,ApiResponse<List<TaskResponseDTO>>,Yes
+GET,/api/tasks/summary,Get task summary for authenticated user,, ,ApiResponse<TaskSummaryDTO>,Yes
+PUT,/api/tasks/update/{taskId},Update a task (must belong to authenticated user),Path: taskId,TaskRequestDTO,ApiResponse<TaskResponseDTO>,Yes
+DELETE,/api/tasks/delete/{taskId},Delete a task (must belong to authenticated user),Path: taskId,,ApiResponse<String>,Yes
+GET,/api/analytics/summary,Get productivity analytics for authenticated user,, ,ApiResponse<AnalyticsSummaryDTO>,Yes

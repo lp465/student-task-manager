@@ -15,34 +15,39 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/tasks")
-@CrossOrigin(origins = "*")
 public class TaskController {
 
     @Autowired
     private TaskService taskService;
 
-    @PostMapping("/create/{userId}")
+    @PostMapping("/create")
     public ResponseEntity<ApiResponse<TaskResponseDTO>> createTask(
-            @PathVariable Long userId,
-            @Valid @RequestBody TaskRequestDTO dto) {
-        TaskResponseDTO task = taskService.createTask(userId, dto);
+            @Valid @RequestBody TaskRequestDTO dto,
+            org.springframework.security.core.Authentication authentication) {
+        String email = (String) authentication.getPrincipal();
+        com.internship.studenttaskmanager.model.User user = taskService.getUserByEmail(email);
+        TaskResponseDTO task = taskService.createTask(user.getId(), dto);
         return ResponseEntity.ok(
                 ApiResponse.success("Task created successfully", task));
     }
 
-    @GetMapping("/user/{userId}")
+    @GetMapping("")
     public ResponseEntity<ApiResponse<List<TaskResponseDTO>>> getTasksByUser(
-            @PathVariable Long userId,
-            @RequestParam(required = false) TaskStatus status) {
-        List<TaskResponseDTO> tasks = taskService.getTasksByUser(userId, status);
+            @RequestParam(required = false) TaskStatus status,
+            org.springframework.security.core.Authentication authentication) {
+        String email = (String) authentication.getPrincipal();
+        com.internship.studenttaskmanager.model.User user = taskService.getUserByEmail(email);
+        List<TaskResponseDTO> tasks = taskService.getTasksByUser(user.getId(), status);
         return ResponseEntity.ok(
                 ApiResponse.success("Tasks retrieved successfully", tasks));
     }
 
-    @GetMapping("/user/{userId}/summary")
+    @GetMapping("/summary")
     public ResponseEntity<ApiResponse<TaskSummaryDTO>> getTaskSummary(
-            @PathVariable Long userId) {
-        TaskSummaryDTO summary = taskService.getTaskSummary(userId);
+            org.springframework.security.core.Authentication authentication) {
+        String email = (String) authentication.getPrincipal();
+        com.internship.studenttaskmanager.model.User user = taskService.getUserByEmail(email);
+        TaskSummaryDTO summary = taskService.getTaskSummary(user.getId());
         return ResponseEntity.ok(
                 ApiResponse.success("Task summary retrieved successfully", summary));
     }
@@ -50,9 +55,11 @@ public class TaskController {
     @PutMapping("/update/{taskId}")
     public ResponseEntity<ApiResponse<TaskResponseDTO>> updateTask(
             @PathVariable Long taskId,
-            @RequestParam Long userId,
-            @Valid @RequestBody TaskRequestDTO dto) {
-        TaskResponseDTO task = taskService.updateTask(taskId, userId, dto);
+            @Valid @RequestBody TaskRequestDTO dto,
+            org.springframework.security.core.Authentication authentication) {
+        String email = (String) authentication.getPrincipal();
+        com.internship.studenttaskmanager.model.User user = taskService.getUserByEmail(email);
+        TaskResponseDTO task = taskService.updateTask(taskId, user.getId(), dto);
         return ResponseEntity.ok(
                 ApiResponse.success("Task updated successfully", task));
     }
@@ -60,8 +67,10 @@ public class TaskController {
     @DeleteMapping("/delete/{taskId}")
     public ResponseEntity<ApiResponse<String>> deleteTask(
             @PathVariable Long taskId,
-            @RequestParam Long userId) {
-        taskService.deleteTask(taskId, userId);
+            org.springframework.security.core.Authentication authentication) {
+        String email = (String) authentication.getPrincipal();
+        com.internship.studenttaskmanager.model.User user = taskService.getUserByEmail(email);
+        taskService.deleteTask(taskId, user.getId());
         return ResponseEntity.ok(
                 ApiResponse.success("Task deleted successfully", null));
     }

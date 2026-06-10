@@ -1,80 +1,58 @@
-# Student Task Manager Frontend
+# Student Task Manager — Frontend
 
-This React + Vite frontend is the presentation layer for the Student Task Management System.
+React + Vite frontend for the Student Task Manager application.
 
-## Features
+Key highlights
 
-- User authentication and protected dashboard
-- Add, edit, complete, and delete tasks
-- Search tasks by title or description
-- Filter tasks by status and priority
-- Dashboard summary cards for completed, pending, and high-priority pending counts
-- Fully responsive, mobile-first design
-- Environment-based backend API configuration
+- Authentication (works with backend JWT + refresh cookie)
+- Task CRUD, filtering, search, and dashboard analytics
+- Responsive, mobile-first UI built with Vite and React
 
-## Tech Stack
+Tech stack
 
 - React
-- Vite
+- Vite (dev server)
 - React Router
 - Context API
-- ESLint
 
-## Run Locally
+Run locally (this project uses `pnpm`):
 
 ```bash
 cd Studenttaskmanager-frontend
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
-Open `http://localhost:5173` after the server starts.
+Default dev port: `5175` (Vite may pick an adjacent port if 5175 is busy). The app reads `VITE_API_BASE_URL` to contact the backend API.
 
-## Build for Production
+Build for production:
 
 ```bash
-npm run build
+pnpm build
 ```
 
-## Environment Variables
+Environment variables
 
-Create a `.env` file in `Studenttaskmanager-frontend/` if you need a custom backend URL.
+- `VITE_API_BASE_URL` — base URL for backend APIs (example: `http://localhost:8081/api`).
 
-```env
-VITE_API_BASE_URL=http://localhost:8080/api
-```
+Key files
 
-## Key Files
-
-- `src/pages/Dashboard.jsx` — main dashboard, task list, filters, summary
-- `src/components/TaskForm.jsx` — task create/edit form
-- `src/components/TaskFilters.jsx` — status and priority filters
-- `src/components/TaskStats.jsx` — dashboard metrics
-- `src/components/TaskCard.jsx` — individual task display controls
-- `src/api/auth.js` — auth API client
-- `src/api/tasks.js` — task API client
+- `src/pages/Dashboard.jsx` — dashboard and analytics
+- `src/components/TaskForm.jsx` — task create/edit UI
+- `src/api/auth.js` — authentication client (login, refresh, logout)
 - `src/context/AuthContext.jsx` — auth state and localStorage persistence
 
-## Recent UI/UX updates (technical)
+Notes for deployment
 
-- Landing page: application root `/` now serves a landing/marketing page with direct CTAs to `Login` and `Create account`.
-- App layout: authenticated routes use `AppLayout` which composes the `Sidebar` and main `app-content` area for consistent navigation.
-- Subject/category: `TaskForm.jsx` includes an optional `subject` select; `TaskCard.jsx` and task API payloads include `subject` (optional field).
-- Styling: `src/index.css` now centralizes tokens (colors, radii, shadows) to make theme changes predictable and maintainable.
-- Dashboard: improved overview grouping (`TaskStats`, `UpcomingDeadlines`) and a short insight card for urgent tasks.
+- Vercel works well for static/frontend deployment. Point `VITE_API_BASE_URL` to your backend URL in Vercel environment variables.
+- Do not commit client-side secrets to Git. Only store non-sensitive runtime endpoints in env.
 
-Compatibility notes:
+Smoke tests
 
-- These are UI-first changes; the frontend continues to use the same backend endpoints and request shapes. The `subject` field is optional and backward compatible with older task records.
+- There is a PowerShell smoke script (`temp-smoke.ps1`) at repo root that exercises register/login/create-task/refresh/logout flows against the backend. Run it from the repo root after starting the backend.
 
-## Notes
+Compatibility
 
-This frontend connects to the backend API using `VITE_API_BASE_URL` and expects the backend to expose auth and task routes under `/api/users` and `/api/tasks`.
+- The frontend expects the backend to expose `/api/users` and `/api/tasks` endpoints. The `subject` field in tasks is optional and backward compatible.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+If you want, I can add a short `deploy-vercel.md` with step-by-step instructions for production deployment.
