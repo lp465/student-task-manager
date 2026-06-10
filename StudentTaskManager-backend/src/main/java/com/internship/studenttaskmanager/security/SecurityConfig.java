@@ -2,7 +2,6 @@ package com.internship.studenttaskmanager.security;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -26,46 +25,66 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtUtils);
 
         http
+                // ✅ IMPORTANT: enable CORS (must be present)
                 .cors(cors -> {
                 })
+                // disable CSRF for stateless APIs
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                // stateless session for JWT
+                .sessionManagement(session
+                        -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                // return 401 instead of redirect
+                .exceptionHandling(ex
+                        -> ex.authenticationEntryPoint(
+                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
+                )
+                )
+                // public endpoints
                 .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/users/register", "/api/users/login", "/actuator/**").permitAll()
+                .requestMatchers(
+                        "/api/users/register",
+                        "/api/users/login",
+                        "/actuator/**"
+                ).permitAll()
                 .anyRequest().authenticated()
                 )
+                // JWT filter
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource(@Value("${frontend.origins:http://localhost:5173,http://localhost:5174,http://localhost:5175}") String frontendOrigins,
-            @Value("${frontend.production.origin:}") String frontendProduction) {
+    public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
-        // support comma-separated origins and localhost wildcard pattern for dev
-        // prefer explicit origins for production via frontend.production.origin
-        if (frontendProduction != null && !frontendProduction.isBlank()) {
-            configuration.setAllowedOriginPatterns(List.of(frontendProduction));
-        } else {
-            String[] parts = frontendOrigins.split(",");
-            for (int i = 0; i < parts.length; i++) {
-                parts[i] = parts[i].trim();
-            }
-            // allow localhost any port as fallback
-            List<String> patterns = new java.util.ArrayList<>(List.of(parts));
-            patterns.add("http://localhost:*");
-            configuration.setAllowedOriginPatterns(patterns);
-        }
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // ✅ Allow your Netlify frontend + local dev
+        configuration.setAllowedOrigins(List.of(
+                "https://student-task-management-system.netlify.app",
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://localhost:5175"
+        ));
+
+        // ✅ Required for preflight + API calls
+        configuration.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS"
+        ));
+
         configuration.setAllowedHeaders(List.of("*"));
+
+        // IMPORTANT for JWT cookies (if used)
         configuration.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 }
