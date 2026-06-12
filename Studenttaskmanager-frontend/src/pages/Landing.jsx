@@ -1,132 +1,96 @@
 import { Link } from "react-router-dom";
 
 function Landing() {
-    return (
-        <div className="landing">
+  return (
+    <div className="landing">
 
-            <div className="landing-card">
+      <div className="landing-card">
 
-                <div className="landing-badge">
-                    Student Task Management System
-                </div>
+        {/* HERO */}
+        <div className="landing-hero">
 
-                <h1 className="landing-title">
-                    Stay on top of assignments and deadlines.
-                </h1>
+          <div className="landing-badge">
+            🎓 Student Task Management System
+          </div>
 
-                <p className="landing-subtitle">
-                    Track your tasks, prioritize what matters,
-                    and see your progress at a glance.
-                </p>
+          <h1 className="landing-title">
+            Stay on top of assignments & deadlines
+          </h1>
 
+          <p className="landing-subtitle">
+            Track tasks, prioritize effectively, and visualize your productivity with smart analytics.
+          </p>
 
-                <div className="landing-actions">
+          <div className="landing-actions">
+            <Link className="landing-btn primary" to="/login">
+              Get Started
+            </Link>
 
-                    <Link
-                        className="landing-btn primary"
-                        to="/login"
-                    >
-                        Login
-                    </Link>
-
-                    <Link
-                        className="landing-btn"
-                        to="/register"
-                    >
-                        Create account
-                    </Link>
-
-                </div>
-
-
-                <div className="landing-features">
-
-                    <div className="landing-feature">
-                        <div className="landing-feature-title">
-                            Quick task tracking
-                        </div>
-
-                        <div className="landing-feature-desc">
-                            Add, edit, complete,
-                            and delete tasks.
-                        </div>
-                    </div>
-
-
-                    <div className="landing-feature">
-                        <div className="landing-feature-title">
-                            Filters + search
-                        </div>
-
-                        <div className="landing-feature-desc">
-                            Find tasks by status,
-                            priority, or keywords.
-                        </div>
-                    </div>
-
-
-                    <div className="landing-feature">
-                        <div className="landing-feature-title">
-                            Dashboard stats
-                        </div>
-
-                        <div className="landing-feature-desc">
-                            See pending, completed,
-                            and high priority counts.
-                        </div>
-                    </div>
-
-                </div>
-
-
-                <div className="landing-how">
-
-                    <div className="landing-how-title">
-                        How it works
-                    </div>
-
-                    <ol className="landing-steps">
-
-                        <li>
-                            <span className="landing-step-title">
-                                Create tasks
-                            </span>
-
-                            <span className="landing-step-desc">
-                                Add what you need to complete with a due date.
-                            </span>
-                        </li>
-
-
-                        <li>
-                            <span className="landing-step-title">
-                                Organize priorities
-                            </span>
-
-                            <span className="landing-step-desc">
-                                Use priority and category to stay focused.
-                            </span>
-                        </li>
-
-
-                        <li>
-                            <span className="landing-step-title">
-                                Track deadlines
-                            </span>
-
-                            <span className="landing-step-desc">
-                                See upcoming deadlines and plan your week.
-                            </span>
-                        </li>
-
-                    </ol>
-
-                </div>
-
-            </div>
+          </div>
 
         </div>
-    );
+
+        {/* FEATURES */}
+        <div className="landing-section-title">
+          ✨ Features
+        </div>
+
+        <div className="landing-features">
+
+          <div className="landing-feature-card">
+            <h3>⚡ Quick Task Tracking</h3>
+            <p>Add, edit, complete, and manage tasks effortlessly.</p>
+          </div>
+
+          <div className="landing-feature-card">
+            <h3>🔍 Smart Filters</h3>
+            <p>Search and filter by status, priority, or keywords instantly.</p>
+          </div>
+
+          <div className="landing-feature-card">
+            <h3>📊 Analytics Dashboard</h3>
+            <p>Visual insights for completion, priorities, and categories.</p>
+          </div>
+
+        </div>
+
+        {/* HOW IT WORKS */}
+        <div className="landing-section-title">
+          🚀 How it works
+        </div>
+
+        <div className="landing-steps">
+
+          <div className="landing-step">
+            <div className="step-number">1</div>
+            <div>
+              <h4>Create tasks</h4>
+              <p>Add tasks with deadlines and descriptions.</p>
+            </div>
+          </div>
+
+          <div className="landing-step">
+            <div className="step-number">2</div>
+            <div>
+              <h4>Organize priorities</h4>
+              <p>Assign categories and priority levels.</p>
+            </div>
+          </div>
+
+          <div className="landing-step">
+            <div className="step-number">3</div>
+            <div>
+              <h4>Track progress</h4>
+              <p>Monitor deadlines and stay productive.</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
 }
 
 export default Landing;
