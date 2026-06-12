@@ -1,48 +1,79 @@
-# Student Task Management System — Complete Overview
+# Student Task Manager
 
-This repository contains a full-stack Student Task Manager application with authentication, task management, analytics, and a responsive frontend.
+Student Task Manager is a full-stack student task tracking application with a React frontend, a Spring Boot REST API, and a MySQL database.
 
-Contents
+## What is implemented
 
-- `StudentTaskManager-backend/` — Spring Boot REST API (Java 21, Maven)
-- `Studenttaskmanager-frontend/` — React + Vite frontend (pnpm)
-- `docs/` — architecture, deployment notes, and archived docs
+- User registration and login
+- Password hashing with BCrypt
+- JWT access tokens returned from login
+- Refresh-token entity and HttpOnly refresh cookie creation on login
+- Task create, read, update, and delete operations
+- Task filtering by status
+- Client-side search and priority filtering in the frontend
+- Dashboard summary cards and analytics charts
+- Optional task subject/category field
+- Responsive frontend layout with a landing page, sidebar, dashboard, and task workspace
 
-Core features (implemented)
+## Repository layout
 
-- Secure user registration and login (BCrypt password hashing)
-- JWT access tokens with server-issued refresh tokens (refresh stored server-side and sent as an HttpOnly cookie)
-- Automatic access-token refresh flow (client calls `/api/users/refresh` using the refresh cookie)
-- Logout that invalidates refresh token and clears cookie
-- Task CRUD: create, edit, complete, delete tasks
-- Task filtering (status, priority), search, and subject/category support (optional field)
-- Dashboard analytics (completion rates, overdue, due-this-week, priority and subject distributions) — served by backend and rendered with Chart.js on the frontend
-- Frontend session persistence (auth stored in `localStorage`), 401 handling with refresh-and-retry, and graceful logout UX
-- Dev-ready CORS configuration to support local ports and an explicit production origin for deployment
+- `Studenttaskmanager-frontend/` - React + Vite frontend
+- `StudentTaskManager-backend/` - Spring Boot backend
+- `docs/architecture/` - system design documentation
+- `docs/api/` - API and schema documentation
+- `docs/core/` - workflow, readiness, and security notes
+- `docs/setup/` - deployment and setup guides
+- `docs/presentation/` - demo and viva notes
+- `docs/reports/` - verification and release snapshots
+- `docs/archive/` - archived duplicates and boilerplate docs
+- `docs/archived/` - older archived backups preserved from earlier cleanup
+- `exports/` - generated schema and endpoint reference CSV files
 
-Architecture summary
+## Architecture at a glance
 
-- Backend: layered controller → service → repository pattern, DTOs for API boundaries, Spring Security filter for JWT validation
-- Frontend: React + Context API for auth state, fetch wrappers that attach Authorization header and perform refresh on 401
+```mermaid
+flowchart LR
+  Browser[Browser]
+  FE[React + Vite Frontend]
+  API[Spring Boot REST API]
+  DB[(MySQL)]
 
-Run locally (recommended)
+  Browser --> FE
+  FE -->|Authorization: Bearer <JWT>| API
+  FE -->|refreshToken cookie on login / refresh helper| API
+  API --> DB
+```
 
-Backend (dev via Maven):
+The backend is structured as controller, service, repository, model, DTO, security, and exception layers. The frontend is structured as pages, reusable components, API wrappers, and authentication context.
+
+## Key implementation notes
+
+- The backend listens on `PORT` if that environment variable is present; otherwise it defaults to `8080`.
+- The frontend API base URL defaults to `http://localhost:8080/api` when `VITE_API_BASE_URL` is not set.
+- Backend CORS origins are currently hardcoded in `SecurityConfig.java` for `https://student-task-management-system.netlify.app` and local ports `5173`, `5174`, and `5175`.
+- The security configuration currently permits only `/api/users/register`, `/api/users/login`, and `/actuator/**` without authentication.
+- The login controller creates an HttpOnly `refreshToken` cookie, but the current security rules do not explicitly exempt `/api/users/refresh` or `/api/users/logout`. That should be reviewed before production use.
+- The task model stores `subject` as an optional field. Analytics group tasks by `subject`, falling back to `Uncategorized` when the field is blank.
+- Task updates are ownership-checked. A user can only update or delete their own tasks.
+- Completed tasks cannot be changed back to pending in the current service logic.
+
+## Local setup
+
+### Backend
 
 ```bash
 cd StudentTaskManager-backend
 ./mvnw spring-boot:run
 ```
 
-Or run the packaged jar on an alternate port:
+On Windows:
 
-```bash
+```powershell
 cd StudentTaskManager-backend
-./mvnw clean package
-java -jar target/studenttaskmanager-0.0.1-SNAPSHOT.jar --server.port=8081
+.\mvnw.cmd spring-boot:run
 ```
 
-Frontend:
+### Frontend
 
 ```bash
 cd Studenttaskmanager-frontend
@@ -50,50 +81,49 @@ pnpm install
 pnpm dev
 ```
 
-Default frontend port: 5175 (Vite may select a nearby port if busy).
+You can also use `npm install` and `npm run dev` if you prefer npm.
 
-Smoke tests
+## Environment variables
 
-- A PowerShell smoke script exists (`temp-smoke.ps1`) at repo root. It registers a temp user, logs in, creates a task, calls analytics, tests refresh and logout flows. Run it after backend is running.
+### Backend
 
-Important environment variables
+- `SPRING_DATASOURCE_URL` - JDBC URL for MySQL
+- `SPRING_DATASOURCE_USERNAME` - database username
+- `SPRING_DATASOURCE_PASSWORD` - database password
+- `JWT_SECRET` - JWT signing secret
+- `JWT_EXPIRATION_MS` - access-token lifetime in milliseconds
+- `JWT_REFRESH_EXPIRATION_MS` - refresh-token lifetime in milliseconds
+- `PORT` - runtime port override used by the application server
 
-- Backend:
-  - `SPRING_DATASOURCE_URL` (default: `jdbc:mysql://localhost:3306/StudentTaskManagement`)
-  - `SPRING_DATASOURCE_USERNAME`
-  - `SPRING_DATASOURCE_PASSWORD`
-  - `SERVER_PORT` (optional)
-  - `JWT_SECRET` (REQUIRED in production — strong secret)
-  - `JWT_EXPIRATION_MS`, `JWT_REFRESH_EXPIRATION_MS` (token lifetimes)
-  - `frontend.origins` (dev comma-separated origins)
-  - `frontend.production.origin` (production origin for strict CORS)
-- Frontend:
-  - `VITE_API_BASE_URL` — base URL for backend APIs (e.g. `http://localhost:8081/api`)
+Default backend values are defined in `StudentTaskManager-backend/src/main/resources/application.properties`.
 
-Deployment notes
+### Frontend
 
-- Frontend (Vercel):
-  - Set `VITE_API_BASE_URL` to your deployed backend URL in Vercel project settings.
-  - Build command: `pnpm build`.
-- Backend (Railway / Render):
-  - Configure DB connection and `JWT_SECRET` as secrets on the platform.
-  - Set `frontend.production.origin` to your Vercel domain to lock CORS.
+- `VITE_API_BASE_URL` - base URL for the backend API, for example `http://localhost:8080/api`
 
-Git / security guidance
+## Main API surface
 
-- Do NOT commit secrets. Keep `application.properties` using environment placeholders.
-- Use `.env.example` (not included) to document required env vars.
+- `POST /api/users/register`
+- `POST /api/users/login`
+- `POST /api/users/refresh`
+- `POST /api/users/logout`
+- `POST /api/tasks/create`
+- `GET /api/tasks`
+- `GET /api/tasks/summary`
+- `PUT /api/tasks/update/{taskId}`
+- `DELETE /api/tasks/delete/{taskId}`
+- `GET /api/analytics/summary`
 
-What I changed in docs during cleanup
+## Documentation map
 
-- Root README updated with this comprehensive overview.
-- Frontend and backend READMEs were updated with run/deploy notes and feature highlights.
-- An `docs/archived/` folder contains backups of previous README content.
-
-Next recommended actions
-
-1. Add a `.env.example` to the repo documenting required env vars for dev and prod.
-2. Create a `DEPLOY.md` with step-by-step instructions for deploying frontend to Vercel and backend to Railway.
-3. Review `docs/archived/` and remove any items you explicitly do not want kept.
-
-If you want, I will now: scan and archive redundant `.md` files and create a single `docs/` index (proceed after your approval).
+- `docs/architecture/ARCHITECTURE.md` - system and module architecture
+- `docs/api/TECHNICAL_DETAILS.md` - schema, DTOs, endpoints, and request/response details
+- `docs/core/WORKFLOW.md` - user journeys and screen-by-screen behavior
+- `docs/setup/DEPLOYMENT.md` - local and production deployment instructions
+- `docs/core/SECURITY_VERIFICATION.md` - security posture and known gaps
+- `docs/core/FINAL_READINESS_REPORT.md` - submission-oriented status summary
+- `docs/setup/DEPLOY_CHECKLIST.md` - deployment checklist
+- `docs/presentation/DEMO_GUIDE.md` - demo script
+- `docs/presentation/DEPLOY_VIVA_CARD.md` - viva quick reference
+- `docs/reports/TEST_REPORT.md` - verification notes
+- `docs/reports/RELEASE_NOTES.md` - release snapshot

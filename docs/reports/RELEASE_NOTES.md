@@ -1,69 +1,25 @@
-# Archived: RELEASE_NOTES.md (moved on 2026-06-10)
+# Release Notes Snapshot
 
-Original content preserved below.
+This file records the current implemented feature set rather than a historical versioned release train.
 
-# Release Notes
+## Implemented features
 
-## Student Task Manager v1.0.1
-
-### Release Date
-
-- 2026-05-28
-
-### Summary
-
-Incremental UI/UX polish and minor persisted data additions to improve usability for students without changing existing API flows.
-
-### Highlights
-
-- Landing page added at `/` with clear primary CTAs (Login / Create account).
-- Application layout (`AppLayout`) and `Sidebar` introduced for consistent navigation across authenticated routes.
-- Dashboard reflow and overview components: `TaskStats`, `UpcomingDeadlines`, and a compact insight card.
-- Task card enhancements: due-date chips (overdue / today / soon / later), consolidated badges for priority and subject.
-- CSS tokens and style refactor for consistent theming and easier maintenance.
-- Added optional `subject` field persisted with tasks (backward compatible).
-
-### Impact
-
-- No breaking API changes. Frontend and backend remain compatible with existing endpoints.
-
-## Student Task Manager v1.0
-
-### Release Date
-
-- 2026-06-18
-
-### Summary
-
-This release delivers a full-stack Student Task Management System with user authentication, task CRUD operations, filtering, priority handling, analytics, and responsive UI.
-
-### Features
-
-- User registration and login
-- Secure password hashing
+- React landing page, login page, register page, dashboard, and task workspace
+- Sidebar navigation for authenticated users
+- JWT login with token persistence in the frontend
+- Server-side refresh-token storage
 - Task creation, editing, completion, and deletion
-- Status filtering: All, Pending, Completed
-- Priority filtering: All, Low, Medium, High
-- Search by task title and description
-- Dashboard analytics for completed, pending, and high-priority pending tasks
-- Mobile-first responsive frontend design
-- Environment-based production configuration
+- Status filtering by backend query parameter
+- Priority filtering and text search in the frontend
+- Dashboard task counters
+- Upcoming deadline highlights
+- Chart.js analytics for completion, priority, category, and deadline status
+- Optional subject field on tasks
 
-### Fixes
+## Behavioral notes
 
-- Corrected high-priority count to show only pending tasks
-- Improved task filter layout for desktop and mobile
-- Fixed dashboard data synchronization after task operations
-- Added backend exception logging for easier debugging
+- Task updates and deletes are ownership-checked.
+- Completed tasks cannot be reverted to pending in the current service logic.
+- The backend currently hardcodes allowed CORS origins in `SecurityConfig.java`.
+- The refresh and logout routes should be reviewed against the current security rules before production deployment.
 
-### Known Issues
-
-- No dedicated JWT-based auth token management in current release
-- No automated frontend end-to-end tests included yet
-
-### Future Planned Features
-
-- Add JWT token security and refresh tokens
-- Add task categories, labels, or deadlines reminders
-- Add automated UI test coverage
-- Add user profile and settings pages
