@@ -1,10 +1,10 @@
 package com.internship.studenttaskmanager.dto;
 
+import java.util.Map;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -18,6 +18,6 @@ public class AnalyticsSummaryDTO {
     private long highPriorityPending;
     private long overdueTasks;
     private long dueThisWeek;
-    private Map<String, Long> subjectDistribution;
+    private Map<String, Long> categoryDistribution;
     private Map<String, Long> priorityDistribution;
 }

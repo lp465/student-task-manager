@@ -28,35 +28,45 @@ function daysUntil(dueDateString) {
 function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+
   const [tasks, setTasks] = useState([]);
   const [summary, setSummary] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
-  const loadTasks = useCallback(
-    async (silent = false) => {
-      if (!silent) setLoading(true);
-      const result = await getTasks(null);
-      if (result.success) {
-        setTasks(result.data);
-      }
-      if (!silent) setLoading(false);
-    },
-    [user],
-  );
+  // ✅ FIXED: removed unnecessary dependency
+  const loadTasks = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
 
+    const result = await getTasks(null);
+
+    if (result.success) {
+      setTasks(result.data);
+    }
+
+    if (!silent) setLoading(false);
+  }, []);
+
+  // ✅ FIXED
   const loadSummary = useCallback(async () => {
     const result = await getTaskSummary();
     if (result.success) {
       setSummary(result.data);
     }
-  }, [user]);
+  }, []);
 
+  // ✅ FIXED
   const loadAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
+
     const result = await getAnalyticsSummary();
-    if (result.success) setAnalytics(result.data);
+
+    if (result.success) {
+      setAnalytics(result.data);
+    }
+
     setAnalyticsLoading(false);
   }, []);
 
@@ -73,9 +83,10 @@ function Dashboard() {
     };
 
     initializeDashboard();
-  }, [user, navigate, loadTasks, loadSummary]);
+  }, [user, navigate, loadTasks, loadSummary, loadAnalytics]);
 
   const pendingTasks = tasks.filter((t) => t?.status === "PENDING");
+
   const dueThisWeekCount = pendingTasks.filter((t) => {
     if (!isValidDate(t?.dueDate)) return false;
     const d = daysUntil(t.dueDate);
@@ -103,17 +114,6 @@ function Dashboard() {
 
       <div className="dashboard-section">
         <TaskStats summary={summary} />
-      </div>
-
-      <div className="dashboard-section">
-        <div className="dashboard-section-title">Productivity Analytics</div>
-        {analyticsLoading ? (
-          <div className="analytics-loading">Loading analytics…</div>
-        ) : analytics ? (
-          <AnalyticsCharts analytics={analytics} />
-        ) : (
-          <div className="analytics-empty">No analytics available</div>
-        )}
       </div>
 
       <div className="insight-card">
@@ -153,11 +153,29 @@ function Dashboard() {
           </button>
         </div>
       </div>
-
       <div className="dashboard-muted">
         Use <strong>My Tasks</strong> to add tasks, search, filter, and manage
         your list.
       </div>
+
+      <div className="dashboard-section">
+        <div className="dashboard-section-title">Productivity Analytics</div>
+
+        {analyticsLoading ? (
+          <div className="analytics-loading">Loading analytics…</div>
+        ) : analytics ? (
+          <AnalyticsCharts
+  analytics={analytics}
+  overdueCount={overdueCount}
+  dueThisWeekCount={dueThisWeekCount}
+  pendingCount={pendingTasks.length}
+/>
+        ) : (
+          <div className="analytics-empty">No analytics available</div>
+        )}
+      </div>
+
+
     </div>
   );
 }

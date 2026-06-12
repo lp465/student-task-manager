@@ -1,14 +1,15 @@
 package com.internship.studenttaskmanager.service;
 
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Service;
+
 import com.internship.studenttaskmanager.dto.AnalyticsSummaryDTO;
 import com.internship.studenttaskmanager.model.TaskPriority;
 import com.internship.studenttaskmanager.model.TaskStatus;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.List;
 
 @Service
 public class AnalyticsService {
@@ -34,12 +35,12 @@ public class AnalyticsService {
         LocalDate weekEnd = today.plusDays(7);
         long dueThisWeek = taskRepository.countByUserAndDueDateBetweenAndStatus(user, today, weekEnd, TaskStatus.PENDING);
 
-        Map<String, Long> subjectDist = new HashMap<>();
-        List<Object[]> subj = taskRepository.countBySubject(user);
-        for (Object[] row : subj) {
+        Map<String, Long> categoryDist = new HashMap<>();
+        List<Object[]> cat = taskRepository.countByCategory(user);
+        for (Object[] row : cat) {
             String s = (String) row[0];
             Long c = ((Number) row[1]).longValue();
-            subjectDist.put(s == null ? "Unspecified" : s, c);
+            categoryDist.put(s, c);
         }
 
         Map<String, Long> priorityDist = new HashMap<>();
@@ -50,6 +51,6 @@ public class AnalyticsService {
             priorityDist.put(p, c);
         }
 
-        return new AnalyticsSummaryDTO(total, completed, pending, completionPct, highPending, overdue, dueThisWeek, subjectDist, priorityDist);
+        return new AnalyticsSummaryDTO(total, completed, pending, completionPct, highPending, overdue, dueThisWeek, categoryDist, priorityDist);
     }
 }

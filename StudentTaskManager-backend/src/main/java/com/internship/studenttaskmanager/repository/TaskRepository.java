@@ -34,9 +34,14 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     long countByUserAndDueDateBetweenAndStatus(User user, java.time.LocalDate start, java.time.LocalDate end, TaskStatus status);
 
-    @org.springframework.data.jpa.repository.Query("SELECT t.subject, COUNT(t) FROM Task t WHERE t.user = :user GROUP BY t.subject")
-    java.util.List<Object[]> countBySubject(@org.springframework.data.repository.query.Param("user") User user);
+    @Query("""
+SELECT COALESCE(t.subject, 'Uncategorized'), COUNT(t)
+FROM Task t
+WHERE t.user = :user
+GROUP BY COALESCE(t.subject, 'Uncategorized')
+""")
+    List<Object[]> countByCategory(@Param("user") User user);
 
-    @org.springframework.data.jpa.repository.Query("SELECT t.priority, COUNT(t) FROM Task t WHERE t.user = :user GROUP BY t.priority")
-    java.util.List<Object[]> countByPriority(@org.springframework.data.repository.query.Param("user") User user);
+    @Query("SELECT t.priority, COUNT(t) FROM Task t WHERE t.user = :user GROUP BY t.priority")
+    java.util.List<Object[]> countByPriority(@Param("user") User user);
 }
